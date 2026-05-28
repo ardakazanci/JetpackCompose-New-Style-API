@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalFoundationStyleApi::class)
-
 package com.ardakazanci.progsettings.components
 
 import androidx.compose.animation.core.animateFloatAsState
@@ -14,16 +12,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.style.ExperimentalFoundationStyleApi
-import androidx.compose.foundation.style.MutableStyleState
 import androidx.compose.foundation.style.Style
-import androidx.compose.foundation.style.pressed
+import androidx.compose.foundation.style.rememberUpdatedStyleState
 import androidx.compose.foundation.style.styleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DeviceThermostat
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -38,19 +32,23 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.ardakazanci.progsettings.ui.theme.AppTheme
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sin
-import com.ardakazanci.progsettings.ui.theme.AppTheme
 
 private const val START_ANGLE = 135f
 private const val SWEEP_ANGLE = 270f
 private const val TICK_COUNT = 60
+private const val GAUGE_RADIUS_FRACTION = 0.75f
+private val EndpointLabelVerticalOffset = 18.dp
+private val EndpointLabelOuterPadding = 4.dp
 
 @Immutable
 data class GaugeColors(
@@ -63,9 +61,7 @@ data class GaugeColors(
     val thumbShadow: Color,
     val tickActive: Color,
     val tickInactive: Color,
-    val iconTint: Color,
-    val temperatureText: Color,
-    val labelText: Color
+    val iconTint: Color
 )
 
 @Immutable
@@ -95,9 +91,7 @@ object TemperatureGaugeDefaults {
         thumbShadow: Color = Color.Black.copy(alpha = 0.1f),
         tickActive: Color = AppTheme.extendedColors.gaugeTickActive,
         tickInactive: Color = AppTheme.extendedColors.gaugeTickInactive,
-        iconTint: Color = MaterialTheme.colorScheme.primary,
-        temperatureText: Color = MaterialTheme.colorScheme.onBackground,
-        labelText: Color = MaterialTheme.colorScheme.onSurfaceVariant
+        iconTint: Color = AppTheme.colorScheme.primary
     ): GaugeColors = GaugeColors(
         activeArc = activeArc,
         trackArc = trackArc,
@@ -108,26 +102,10 @@ object TemperatureGaugeDefaults {
         thumbShadow = thumbShadow,
         tickActive = tickActive,
         tickInactive = tickInactive,
-        iconTint = iconTint,
-        temperatureText = temperatureText,
-        labelText = labelText
+        iconTint = iconTint
     )
 
     fun dimensions(): GaugeDimensions = GaugeDimensions()
-
-    @Composable
-    fun centerContentStyle(): Style {
-        val primary = MaterialTheme.colorScheme.primary
-        return Style {
-            shape(CircleShape)
-            contentColor(primary)
-            pressed(Style {
-                animate(Style {
-                    scale(0.95f)
-                })
-            })
-        }
-    }
 }
 
 @Composable
@@ -138,9 +116,10 @@ fun TemperatureGauge(
     progress: Float,
     onProgressChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     colors: GaugeColors = TemperatureGaugeDefaults.colors(),
     dimensions: GaugeDimensions = TemperatureGaugeDefaults.dimensions(),
-    centerStyle: Style = TemperatureGaugeDefaults.centerContentStyle()
+    centerStyle: Style = Style
 ) {
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
@@ -154,7 +133,9 @@ fun TemperatureGauge(
     }
 
     val centerInteractionSource = remember { MutableInteractionSource() }
-    val centerStyleState = remember { MutableStyleState(centerInteractionSource) }
+    val centerStyleState = rememberUpdatedStyleState(centerInteractionSource) {
+        it.isEnabled = enabled
+    }
 
     Box(
         modifier = modifier
@@ -166,24 +147,26 @@ fun TemperatureGauge(
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectDragGestures { change, _ ->
-                        change.consume()
-                        val center = Offset(size.width / 2f, size.height / 2f)
-                        val touchAngle = atan2(
-                            change.position.y - center.y,
-                            change.position.x - center.x
-                        ) * (180f / PI.toFloat())
+                .pointerInput(enabled) {
+                    if (enabled) {
+                        detectDragGestures { change, _ ->
+                            change.consume()
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val touchAngle = atan2(
+                                change.position.y - center.y,
+                                change.position.x - center.x
+                            ) * (180f / PI.toFloat())
 
-                        val normalizedAngle = ((touchAngle - START_ANGLE + 360f) % 360f)
-                        if (normalizedAngle in 0f..SWEEP_ANGLE) {
-                            val newProgress = (normalizedAngle / SWEEP_ANGLE).coerceIn(0f, 1f)
-                            onProgressChange(newProgress)
+                            val normalizedAngle = ((touchAngle - START_ANGLE + 360f) % 360f)
+                            if (normalizedAngle in 0f..SWEEP_ANGLE) {
+                                val newProgress = (normalizedAngle / SWEEP_ANGLE).coerceIn(0f, 1f)
+                                onProgressChange(newProgress)
+                            }
                         }
                     }
                 }
         ) {
-            val gaugeRadius = size.minDimension / 2f * 0.75f
+            val gaugeRadius = size.minDimension / 2f * GAUGE_RADIUS_FRACTION
             val center = Offset(size.width / 2f, size.height / 2f)
             val stroke = dimensions.strokeWidth.toPx()
 
@@ -251,8 +234,9 @@ fun TemperatureGauge(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.styleable(
-                styleState = centerStyleState,
-                style = centerStyle
+                centerStyleState,
+                AppTheme.styles.gaugeCenterContent,
+                centerStyle
             )
         ) {
             Icon(
@@ -263,45 +247,76 @@ fun TemperatureGauge(
             )
             Text(
                 text = "${displayTemp}°C",
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 46.sp
-                ),
-                color = colors.temperatureText
+                modifier = Modifier.styleable(style = AppTheme.styles.gaugeTemperature)
             )
             Text(
                 text = "Room temperature",
-                style = MaterialTheme.typography.bodyMedium,
-                color = colors.labelText
+                modifier = Modifier.styleable(style = AppTheme.styles.gaugeSupportingText)
             )
         }
 
-        Text(
+        GaugeEndpointLabel(
             text = "${minTemp.toInt()}°",
-            style = MaterialTheme.typography.bodyMedium,
-            color = colors.labelText,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 24.dp, bottom = 36.dp)
+            angle = START_ANGLE,
+            dimensions = dimensions,
+            modifier = Modifier.fillMaxSize()
         )
 
-        Text(
+        GaugeEndpointLabel(
             text = "${maxTemp.toInt()}°",
-            style = MaterialTheme.typography.bodyMedium,
-            color = colors.labelText,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 24.dp, bottom = 36.dp)
+            angle = START_ANGLE + SWEEP_ANGLE,
+            dimensions = dimensions,
+            modifier = Modifier.fillMaxSize()
         )
 
         Text(
             text = "${currentTemperature.toInt()}°",
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-            color = colors.temperatureText,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 8.dp)
+                .styleable(style = AppTheme.styles.gaugeCurrentTemperature)
         )
+    }
+}
+
+@Composable
+private fun GaugeEndpointLabel(
+    text: String,
+    angle: Float,
+    dimensions: GaugeDimensions,
+    modifier: Modifier = Modifier
+) {
+    Layout(
+        content = {
+            Text(
+                text = text,
+                modifier = Modifier.styleable(style = AppTheme.styles.gaugeEndpointLabel)
+            )
+        },
+        modifier = modifier
+    ) { measurables, constraints ->
+        val placeable = measurables.first().measure(
+            constraints.copy(minWidth = 0, minHeight = 0)
+        )
+        val width = constraints.maxWidth
+        val height = constraints.maxHeight
+        val radius = min(width, height) / 2f * GAUGE_RADIUS_FRACTION
+        val labelRadius = radius +
+            dimensions.tickOuterOffset.toPx() +
+            dimensions.majorTickLength.toPx() +
+            EndpointLabelOuterPadding.toPx()
+        val centerX = width / 2f
+        val centerY = height / 2f
+        val radians = angle * (PI.toFloat() / 180f)
+        val x = centerX + labelRadius * cos(radians) - placeable.width / 2f
+        val y = centerY + labelRadius * sin(radians) + EndpointLabelVerticalOffset.toPx()
+
+        layout(width, height) {
+            placeable.place(
+                x.roundToInt().coerceIn(0, width - placeable.width),
+                y.roundToInt().coerceIn(0, height - placeable.height)
+            )
+        }
     }
 }
 

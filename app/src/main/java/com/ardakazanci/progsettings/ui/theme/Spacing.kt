@@ -1,7 +1,6 @@
 package com.ardakazanci.progsettings.ui.theme
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -16,5 +15,3 @@ data class Spacing(
     val xxl: Dp = 24.dp,
     val xxxl: Dp = 32.dp
 )
-
-val LocalSpacing = staticCompositionLocalOf { Spacing() }

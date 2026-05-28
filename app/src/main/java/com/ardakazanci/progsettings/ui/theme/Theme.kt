@@ -1,12 +1,16 @@
 package com.ardakazanci.progsettings.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 private val LightColorScheme = lightColorScheme(
@@ -41,18 +45,48 @@ private val DarkColorScheme = darkColorScheme(
     outlineVariant = Color(0xFF3A3A50)
 )
 
+@Immutable
+data class AppThemeTokens(
+    val colorScheme: androidx.compose.material3.ColorScheme,
+    val typography: androidx.compose.material3.Typography,
+    val extendedColors: ExtendedColors,
+    val spacing: Spacing,
+    val shapes: AppShapes
+)
+
+val LocalAppTheme = staticCompositionLocalOf {
+    AppThemeTokens(
+        colorScheme = LightColorScheme,
+        typography = Typography,
+        extendedColors = LightExtendedColors,
+        spacing = Spacing(),
+        shapes = AppShapes()
+    )
+}
+
 object AppTheme {
+    val colorScheme: ColorScheme
+        @Composable @ReadOnlyComposable
+        get() = LocalAppTheme.current.colorScheme
+
+    val typography: androidx.compose.material3.Typography
+        @Composable @ReadOnlyComposable
+        get() = LocalAppTheme.current.typography
+
+    val styles: AppStyles
+        get() = AppStyles
+
     val extendedColors: ExtendedColors
         @Composable @ReadOnlyComposable
-        get() = LocalExtendedColors.current
+        get() = LocalAppTheme.current.extendedColors
 
     val spacing: Spacing
         @Composable @ReadOnlyComposable
-        get() = LocalSpacing.current
+        get() = LocalAppTheme.current.spacing
 
     val shapes: AppShapes
         @Composable @ReadOnlyComposable
-        get() = LocalAppShapes.current
+        get() = LocalAppTheme.current.shapes
 }
 
 @Composable
@@ -62,15 +96,22 @@ fun ProgSettingsTheme(
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val extendedColors = if (darkTheme) DarkExtendedColors else LightExtendedColors
-
-    CompositionLocalProvider(
-        LocalExtendedColors provides extendedColors,
-        LocalSpacing provides Spacing(),
-        LocalAppShapes provides AppShapes()
-    ) {
-        MaterialTheme(
+    val appTheme = remember(colorScheme, extendedColors) {
+        AppThemeTokens(
             colorScheme = colorScheme,
             typography = Typography,
+            extendedColors = extendedColors,
+            spacing = Spacing(),
+            shapes = AppShapes()
+        )
+    }
+
+    CompositionLocalProvider(
+        LocalAppTheme provides appTheme
+    ) {
+        MaterialTheme(
+            colorScheme = appTheme.colorScheme,
+            typography = appTheme.typography,
             content = content
         )
     }

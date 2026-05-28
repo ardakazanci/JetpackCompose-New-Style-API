@@ -1,7 +1,6 @@
 package com.ardakazanci.progsettings.ui.theme
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 @Immutable
@@ -55,5 +54,3 @@ val DarkExtendedColors = ExtendedColors(
     gaugeTickActive = Palette.Blue400.copy(alpha = 0.5f),
     gaugeTickInactive = Color(0xFF3A3A50)
 )
-
-val LocalExtendedColors = staticCompositionLocalOf { LightExtendedColors }
