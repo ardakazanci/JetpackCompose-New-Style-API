@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalFoundationStyleApi::class)
-
 package com.ardakazanci.progsettings.components
 
 import androidx.compose.foundation.background
@@ -12,16 +10,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.style.ExperimentalFoundationStyleApi
-import androidx.compose.foundation.style.MutableStyleState
 import androidx.compose.foundation.style.Style
-import androidx.compose.foundation.style.pressed
+import androidx.compose.foundation.style.rememberUpdatedStyleState
 import androidx.compose.foundation.style.styleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -31,27 +26,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.ardakazanci.progsettings.ui.theme.AppTheme
-
-object UsageCardDefaults {
-    @Composable
-    fun style(): Style {
-        val ext = AppTheme.extendedColors
-        val shapes = AppTheme.shapes
-        val spacing = AppTheme.spacing
-        val onBg = MaterialTheme.colorScheme.onBackground
-        return Style {
-            background(ext.cardBackground)
-            shape(shapes.card)
-            contentPadding(horizontal = spacing.lg, vertical = spacing.lg + spacing.xxs)
-            contentColor(onBg)
-            pressed(Style {
-                animate(Style {
-                    scale(0.96f)
-                })
-            })
-        }
-    }
-}
 
 @Composable
 fun UsageCards(
@@ -85,17 +59,17 @@ private fun UsageCard(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    style: Style = UsageCardDefaults.style()
+    style: Style = Style
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val styleState = remember { MutableStyleState(interactionSource) }
+    val styleState = rememberUpdatedStyleState(interactionSource)
     val ext = AppTheme.extendedColors
     val shapes = AppTheme.shapes
     val spacing = AppTheme.spacing
 
     Row(
         modifier = modifier
-            .styleable(styleState = styleState, style = style)
+            .styleable(styleState, AppTheme.styles.usageCard, style)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null
@@ -113,21 +87,20 @@ private fun UsageCard(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = AppTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
             )
         }
         Column {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                modifier = Modifier.styleable(style = AppTheme.styles.usageLabel)
             )
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(top = spacing.xxs)
+                modifier = Modifier
+                    .padding(top = spacing.xxs)
+                    .styleable(style = AppTheme.styles.usageValue)
             )
         }
     }
