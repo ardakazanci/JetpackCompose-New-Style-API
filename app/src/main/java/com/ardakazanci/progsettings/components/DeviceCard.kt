@@ -21,12 +21,12 @@ import com.ardakazanci.progsettings.ui.theme.AppTheme
 
 @Composable
 fun DeviceCard(
+    modifier: Modifier = Modifier,
+    style: Style = Style,
     deviceName: String,
     isOn: Boolean,
     onToggle: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    style: Style = Style
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val styleState = rememberUpdatedStyleState(interactionSource) {
